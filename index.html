@@ -1,0 +1,513 @@
+import { useState, useEffect } from "react";
+
+const ROUNDS = [8, 7, 6, 5, 4, 3, 2, 1, 2, 3, 4, 5, 6, 7, 8];
+
+function calcScore(bid, won) {
+  if (won === bid) return 10 + 2 * bid;
+  if (won > bid) return won;
+  return 0;
+}
+
+function RoundPips({ current }) {
+  return (
+    <div style={{ display: "flex", gap: "3px", justifyContent: "center", flexWrap: "wrap", maxWidth: "320px", margin: "0 auto 16px" }}>
+      {ROUNDS.map((n, i) => (
+        <div key={i} style={{
+          width: i === current ? "28px" : "18px",
+          height: i === current ? "28px" : "18px",
+          borderRadius: "50%",
+          background: i < current ? "#2d6a4f" : i === current ? "#d4af37" : "#1a3a4a",
+          border: i === current ? "2px solid #f0e6d3" : "1px solid #2a5470",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: i === current ? "11px" : "9px",
+          color: i === current ? "#000" : i < current ? "#7ec8a0" : "#4a7a9b",
+          fontWeight: "bold",
+          transition: "all 0.3s ease",
+          flexShrink: 0,
+        }}>{n}</div>
+      ))}
+    </div>
+  );
+}
+
+export default function App() {
+  const [phase, setPhase] = useState("setup");
+  const [names, setNames] = useState(["Player 1", "Player 2", "Player 3", "Player 4", "", "", "", ""]);
+  const [count, setCount] = useState(4);
+  const [roundIdx, setRoundIdx] = useState(0);
+  const [dealerIdx, setDealerIdx] = useState(0);
+  const [bids, setBids] = useState([]);
+  const [bidOrder, setBidOrder] = useState([]);
+  const [bidStep, setBidStep] = useState(0);
+  const [won, setWon] = useState([]);
+  const [scores, setScores] = useState(Array(8).fill(0));
+  const [lastRoundScores, setLastRoundScores] = useState([]);
+  const [lastWon, setLastWon] = useState([]);
+  const [lastBids, setLastBids] = useState([]);
+
+  const players = names.slice(0, count);
+  const cardCount = ROUNDS[roundIdx];
+  const isException = cardCount <= 3;
+  const wonTotal = won.reduce((a, b) => a + b, 0);
+
+  const getBidOrder = (dealer) => {
+    const order = [];
+    for (let i = 1; i <= count; i++) order.push((dealer + i) % count);
+    return order;
+  };
+
+  const startGame = () => {
+    setRoundIdx(0);
+    setDealerIdx(0);
+    setScores(Array(8).fill(0));
+    setPhase("roundIntro");
+  };
+
+  const startBidding = () => {
+    const order = getBidOrder(dealerIdx);
+    setBidOrder(order);
+    setBids(Array(count).fill(-1));
+    setBidStep(0);
+    setPhase("bidding");
+  };
+
+  const getRestrictedBid = (currentBids) => {
+    if (isException) return null;
+    if (bidStep !== count - 1) return null;
+    const total = currentBids.reduce((s, b) => s + (b >= 0 ? b : 0), 0);
+    const restricted = cardCount - total;
+    return restricted >= 0 && restricted <= cardCount ? restricted : null;
+  };
+
+  const handleBid = (val) => {
+    const playerIdx = bidOrder[bidStep];
+    const newBids = [...bids];
+    newBids[playerIdx] = val;
+    setBids(newBids);
+    if (bidStep === count - 1) {
+      setWon(Array(count).fill(0));
+      setPhase("tricks");
+    } else {
+      setBidStep(bidStep + 1);
+    }
+  };
+
+  const finishRound = () => {
+    if (wonTotal !== cardCount) return;
+    const rs = players.map((_, i) => calcScore(bids[i], won[i]));
+    setLastRoundScores(rs);
+    setLastWon([...won]);
+    setLastBids([...bids]);
+    setScores((prev) => prev.map((s, i) => (i < count ? s + rs[i] : s)));
+    setPhase("summary");
+  };
+
+  const nextRound = () => {
+    if (roundIdx === 14) {
+      setPhase("gameover");
+    } else {
+      setRoundIdx(roundIdx + 1);
+      setDealerIdx((dealerIdx + 1) % count);
+      setPhase("roundIntro");
+    }
+  };
+
+  const canSubmit = wonTotal === cardCount;
+  const restricted = getRestrictedBid(bids);
+  const currentBidderIdx = bidOrder[bidStep];
+  const currentBidderName = players[currentBidderIdx];
+
+  const styles = {
+    wrap: {
+      minHeight: "100vh",
+      background: "radial-gradient(ellipse at 50% 0%, #1a4a2e 0%, #0a1f14 60%, #060f0a 100%)",
+      color: "#f0e6d3",
+      fontFamily: "'Georgia', 'Times New Roman', serif",
+      padding: "16px 12px 32px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      overflowX: "hidden",
+    },
+    card: {
+      background: "linear-gradient(145deg, #0e2a1c, #0a1f14)",
+      border: "1px solid #1a4a2e",
+      borderRadius: "20px",
+      padding: "24px 20px",
+      width: "100%",
+      maxWidth: "420px",
+      boxShadow: "0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)",
+      marginBottom: "12px",
+    },
+    title: {
+      color: "#d4af37",
+      fontSize: "26px",
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: "4px",
+      textShadow: "0 2px 8px rgba(212,175,55,0.3)",
+      letterSpacing: "0.5px",
+    },
+    sub: { color: "#5a8a6a", textAlign: "center", fontSize: "13px", marginBottom: "20px" },
+    btn: {
+      background: "linear-gradient(135deg, #d4af37, #b8962e)",
+      color: "#0a1f14",
+      border: "none",
+      borderRadius: "14px",
+      padding: "16px 24px",
+      fontSize: "17px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      width: "100%",
+      marginTop: "16px",
+      boxShadow: "0 4px 16px rgba(212,175,55,0.25)",
+      letterSpacing: "0.3px",
+    },
+    btnDisabled: {
+      background: "#1a3a2a",
+      color: "#2d5a3d",
+      border: "1px solid #1a3a2a",
+      borderRadius: "14px",
+      padding: "16px 24px",
+      fontSize: "17px",
+      fontWeight: "bold",
+      cursor: "not-allowed",
+      width: "100%",
+      marginTop: "16px",
+    },
+    input: {
+      background: "#06160d",
+      border: "1px solid #1a4a2e",
+      borderRadius: "10px",
+      color: "#f0e6d3",
+      padding: "12px 14px",
+      fontSize: "16px",
+      width: "100%",
+      marginBottom: "8px",
+      boxSizing: "border-box",
+      outline: "none",
+    },
+    row: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "10px 0",
+      borderBottom: "1px solid #0e2a1c",
+    },
+    numBtnBase: {
+      borderRadius: "50%",
+      width: "58px",
+      height: "58px",
+      fontSize: "22px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "none",
+      transition: "all 0.15s ease",
+    },
+    plusMinus: (col) => ({
+      background: col,
+      border: "none",
+      borderRadius: "10px",
+      color: "#f0e6d3",
+      width: "44px",
+      height: "44px",
+      fontSize: "24px",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: "bold",
+      flexShrink: 0,
+    }),
+  };
+
+  // ── SETUP ──────────────────────────────────────────────────────────────
+  if (phase === "setup") return (
+    <div style={styles.wrap}>
+      <div style={{ ...styles.card, marginTop: "12px" }}>
+        <div style={{ fontSize: "40px", textAlign: "center", marginBottom: "4px" }}>🃏</div>
+        <div style={styles.title}>Up & Down the River</div>
+        <div style={styles.sub}>15-round trick-taking card game</div>
+
+        <div style={{ marginBottom: "18px" }}>
+          <div style={{ fontSize: "12px", color: "#5a8a6a", letterSpacing: "1px", marginBottom: "8px" }}>PLAYERS</div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <button key={n} onClick={() => setCount(n)} style={{
+                borderRadius: "10px", width: "44px", height: "44px", fontSize: "17px",
+                border: count === n ? "2px solid #d4af37" : "1px solid #1a4a2e",
+                background: count === n ? "rgba(212,175,55,0.15)" : "#06160d",
+                color: count === n ? "#d4af37" : "#5a8a6a",
+                cursor: "pointer", fontWeight: "bold",
+              }}>{n}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ fontSize: "12px", color: "#5a8a6a", letterSpacing: "1px", marginBottom: "8px" }}>PLAYER NAMES</div>
+        {Array.from({ length: count }, (_, i) => (
+          <input key={i} style={styles.input}
+            placeholder={`Player ${i + 1}`}
+            value={names[i]}
+            onChange={(e) => { const n = [...names]; n[i] = e.target.value || `Player ${i + 1}`; setNames(n); }}
+          />
+        ))}
+
+        <button style={styles.btn} onClick={startGame}>Deal 'Em In →</button>
+      </div>
+    </div>
+  );
+
+  // ── ROUND INTRO ────────────────────────────────────────────────────────
+  if (phase === "roundIntro") return (
+    <div style={styles.wrap}>
+      <div style={{ ...styles.card, marginTop: "12px" }}>
+        <div style={styles.title}>Round {roundIdx + 1}</div>
+        <div style={styles.sub}>of 15 rounds</div>
+        <RoundPips current={roundIdx} />
+
+        <div style={{ textAlign: "center", margin: "12px 0 20px" }}>
+          <div style={{ fontSize: "64px", color: "#d4af37", fontWeight: "bold", lineHeight: 1, textShadow: "0 4px 16px rgba(212,175,55,0.4)" }}>{cardCount}</div>
+          <div style={{ color: "#5a8a6a", fontSize: "15px", marginTop: "4px" }}>cards per player</div>
+        </div>
+
+        <div style={{ background: "#06160d", borderRadius: "14px", padding: "14px 16px", marginBottom: "16px" }}>
+          <div style={{ ...styles.row, borderBottom: "1px solid #0e2a1c", paddingBottom: "10px", marginBottom: "10px" }}>
+            <span style={{ color: "#5a8a6a", fontSize: "14px" }}>Dealer</span>
+            <span style={{ color: "#d4af37", fontWeight: "bold" }}>{players[dealerIdx]}</span>
+          </div>
+          <div style={{ ...styles.row, borderBottom: "none", padding: 0 }}>
+            <span style={{ color: "#5a8a6a", fontSize: "14px" }}>First to bid</span>
+            <span style={{ fontWeight: "bold" }}>{players[(dealerIdx + 1) % count]}</span>
+          </div>
+        </div>
+
+        <div style={{ background: "#0e1f18", border: "1px dashed #1a4a2e", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "#5a8a6a", textAlign: "center", marginBottom: "16px" }}>
+          🃏 Flip a card from the deck to determine trump suit
+        </div>
+
+        <div style={{ marginBottom: "4px" }}>
+          <div style={{ fontSize: "12px", color: "#5a8a6a", letterSpacing: "1px", marginBottom: "8px" }}>CURRENT SCORES</div>
+          {players.map((p, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #0e2a1c" }}>
+              <span style={{ fontSize: "15px" }}>{p}</span>
+              <span style={{ color: "#d4af37", fontWeight: "bold", fontSize: "15px" }}>{scores[i]} pts</span>
+            </div>
+          ))}
+        </div>
+
+        <button style={styles.btn} onClick={startBidding}>Start Bidding →</button>
+      </div>
+    </div>
+  );
+
+  // ── BIDDING ────────────────────────────────────────────────────────────
+  if (phase === "bidding") {
+    const isDealer = bidStep === count - 1;
+    const totalSoFar = bids.reduce((s, b) => s + (b >= 0 ? b : 0), 0);
+
+    return (
+      <div style={styles.wrap}>
+        <div style={{ ...styles.card, marginTop: "12px" }}>
+          <div style={styles.title}>Bidding</div>
+          <div style={styles.sub}>Round {roundIdx + 1} · {cardCount} cards · {bidStep + 1} of {count}</div>
+
+          <div style={{ textAlign: "center", margin: "16px 0 8px" }}>
+            <div style={{ fontSize: "13px", color: "#5a8a6a", letterSpacing: "1px", marginBottom: "6px" }}>
+              {isDealer ? "DEALER'S BID" : "BIDDING NOW"}
+            </div>
+            <div style={{ fontSize: "32px", fontWeight: "bold", color: "#d4af37" }}>{currentBidderName}</div>
+            <div style={{ fontSize: "14px", color: "#5a8a6a", marginTop: "4px" }}>How many tricks will you win?</div>
+          </div>
+
+          {isDealer && restricted !== null && (
+            <div style={{ background: "#1a0e00", border: "1px solid #7a4a00", borderRadius: "10px", padding: "10px 14px", marginBottom: "12px", fontSize: "13px", color: "#c8883a", textAlign: "center" }}>
+              ⚠️ Dealer cannot bid <strong>{restricted}</strong> — total bids can't equal {cardCount}
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "center", margin: "16px 0" }}>
+            {Array.from({ length: cardCount + 1 }, (_, i) => {
+              const isRestricted = i === restricted;
+              return (
+                <button key={i} disabled={isRestricted} onClick={() => handleBid(i)}
+                  style={{
+                    ...styles.numBtnBase,
+                    background: isRestricted ? "#0e1a14" : "linear-gradient(145deg, #1a4a2e, #0e2a1c)",
+                    color: isRestricted ? "#1a3a2a" : "#f0e6d3",
+                    border: isRestricted ? "2px solid #0e1a14" : "2px solid #2a6040",
+                    boxShadow: isRestricted ? "none" : "0 4px 12px rgba(0,0,0,0.3)",
+                    cursor: isRestricted ? "not-allowed" : "pointer",
+                    position: "relative",
+                  }}>
+                  {i}
+                  {isRestricted && <span style={{ position: "absolute", top: "2px", right: "4px", fontSize: "10px", color: "#7a4a00" }}>✕</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {bids.some((b) => b >= 0) && (
+            <div style={{ background: "#06160d", borderRadius: "12px", padding: "12px 14px" }}>
+              <div style={{ fontSize: "11px", color: "#5a8a6a", letterSpacing: "1px", marginBottom: "8px" }}>BIDS SO FAR · Total: {totalSoFar}</div>
+              {players.map((p, i) =>
+                bids[i] >= 0 ? (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: "15px" }}>
+                    <span style={{ color: "#b0d0c0" }}>{p}</span>
+                    <span style={{ color: "#d4af37", fontWeight: "bold" }}>{bids[i]}</span>
+                  </div>
+                ) : null
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── TRICKS ENTRY ───────────────────────────────────────────────────────
+  if (phase === "tricks") {
+    const remaining = cardCount - wonTotal;
+
+    return (
+      <div style={styles.wrap}>
+        <div style={{ ...styles.card, marginTop: "12px" }}>
+          <div style={styles.title}>Tricks Won</div>
+          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+            <span style={{
+              display: "inline-block", background: remaining === 0 ? "rgba(45,106,79,0.3)" : "rgba(212,175,55,0.15)",
+              border: `1px solid ${remaining === 0 ? "#2d6a4f" : "#7a6020"}`,
+              color: remaining === 0 ? "#7ec8a0" : "#d4af37",
+              borderRadius: "20px", padding: "5px 16px", fontSize: "14px",
+            }}>
+              {remaining > 0 ? `${remaining} trick${remaining !== 1 ? "s" : ""} left to assign` : "✓ All tricks assigned"}
+            </span>
+          </div>
+
+          {players.map((p, i) => (
+            <div key={i} style={{ ...styles.row, padding: "12px 0" }}>
+              <div>
+                <div style={{ fontWeight: "bold", fontSize: "16px" }}>{p}</div>
+                <div style={{ fontSize: "12px", color: "#5a8a6a", marginTop: "2px" }}>bid: {bids[i]}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <button style={styles.plusMinus("#0e2a1c")} onClick={() => {
+                  const w = [...won]; if (w[i] > 0) { w[i]--; setWon(w); }
+                }}>−</button>
+                <span style={{
+                  fontSize: "28px", fontWeight: "bold", minWidth: "28px", textAlign: "center",
+                  color: won[i] === bids[i] ? "#d4af37" : "#f0e6d3",
+                }}>{won[i]}</span>
+                <button style={styles.plusMinus(wonTotal < cardCount ? "#1a4a2e" : "#0e1a14")} onClick={() => {
+                  if (wonTotal < cardCount) { const w = [...won]; w[i]++; setWon(w); }
+                }}>+</button>
+              </div>
+            </div>
+          ))}
+
+          <button style={canSubmit ? styles.btn : styles.btnDisabled} onClick={canSubmit ? finishRound : undefined}>
+            {canSubmit ? "Calculate Scores →" : `Need ${cardCount - wonTotal} more trick${cardCount - wonTotal !== 1 ? "s" : ""}`}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── ROUND SUMMARY ──────────────────────────────────────────────────────
+  if (phase === "summary") {
+    const sorted = [...players.map((p, i) => ({ p, s: scores[i], i }))].sort((a, b) => b.s - a.s);
+
+    return (
+      <div style={styles.wrap}>
+        <div style={{ ...styles.card, marginTop: "12px" }}>
+          <div style={styles.title}>Round {roundIdx + 1} Results</div>
+          <div style={styles.sub}>{roundIdx < 14 ? `${14 - roundIdx} rounds remaining` : "Final round!"}</div>
+
+          {players.map((p, i) => {
+            const hit = lastWon[i] === lastBids[i];
+            const over = lastWon[i] > lastBids[i];
+            const gained = lastRoundScores[i];
+            return (
+              <div key={i} style={{ ...styles.row, padding: "14px 0" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: "bold", fontSize: "17px" }}>{p}</div>
+                  <div style={{ fontSize: "13px", color: "#5a8a6a", marginTop: "3px" }}>
+                    bid <strong style={{ color: "#f0e6d3" }}>{lastBids[i]}</strong> · won <strong style={{ color: "#f0e6d3" }}>{lastWon[i]}</strong>
+                    {" "}
+                    <span style={{ color: hit ? "#7ec8a0" : over ? "#d4a045" : "#c1121f" }}>
+                      {hit ? "✓ Exact!" : over ? "▲ Over" : "✗ Under"}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", marginLeft: "12px" }}>
+                  <div style={{ fontSize: "22px", fontWeight: "bold", color: gained > 0 ? "#d4af37" : "#5a2020" }}>
+                    {gained > 0 ? "+" : ""}{gained}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#5a8a6a" }}>{scores[i]} total</div>
+                </div>
+              </div>
+            );
+          })}
+
+          <div style={{ background: "#06160d", borderRadius: "12px", padding: "12px 14px", marginTop: "8px", marginBottom: "4px" }}>
+            <div style={{ fontSize: "11px", color: "#5a8a6a", letterSpacing: "1px", marginBottom: "8px" }}>LEADERBOARD</div>
+            {sorted.map(({ p, s, i }, rank) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
+                <span style={{ color: rank === 0 ? "#d4af37" : "#b0d0c0", fontSize: "15px" }}>
+                  {["🥇", "🥈", "🥉", "4.", "5.", "6.", "7.", "8."][rank]} {p}
+                </span>
+                <span style={{ fontWeight: "bold", color: rank === 0 ? "#d4af37" : "#f0e6d3" }}>{s}</span>
+              </div>
+            ))}
+          </div>
+
+          <button style={styles.btn} onClick={nextRound}>
+            {roundIdx === 14 ? "Final Results 🏆" : `Next Round →`}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── GAME OVER ──────────────────────────────────────────────────────────
+  if (phase === "gameover") {
+    const sorted = [...players.map((p, i) => ({ p, s: scores[i] }))].sort((a, b) => b.s - a.s);
+    const medals = ["🥇", "🥈", "🥉", "4th", "5th", "6th", "7th", "8th"];
+
+    return (
+      <div style={styles.wrap}>
+        <div style={{ ...styles.card, marginTop: "12px" }}>
+          <div style={{ textAlign: "center", marginBottom: "8px" }}>
+            <div style={{ fontSize: "56px" }}>🏆</div>
+            <div style={styles.title}>Game Over!</div>
+          </div>
+
+          <div style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))", border: "1px solid rgba(212,175,55,0.3)", borderRadius: "16px", padding: "20px", textAlign: "center", marginBottom: "20px" }}>
+            <div style={{ fontSize: "14px", color: "#5a8a6a", letterSpacing: "1px", marginBottom: "6px" }}>WINNER</div>
+            <div style={{ fontSize: "30px", fontWeight: "bold", color: "#d4af37" }}>{sorted[0].p}</div>
+            <div style={{ fontSize: "20px", color: "#f0e6d3", marginTop: "4px" }}>{sorted[0].s} points</div>
+          </div>
+
+          {sorted.slice(1).map(({ p, s }, i) => (
+            <div key={i} style={{ ...styles.row, padding: "12px 0" }}>
+              <span style={{ fontSize: "16px" }}>{medals[i + 1]} {p}</span>
+              <span style={{ fontWeight: "bold", color: "#d4af37" }}>{s} pts</span>
+            </div>
+          ))}
+
+          <button style={styles.btn} onClick={() => {
+            setScores(Array(8).fill(0));
+            setRoundIdx(0);
+            setDealerIdx(0);
+            setPhase("setup");
+          }}>New Game</button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
