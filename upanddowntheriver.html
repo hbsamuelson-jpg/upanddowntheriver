@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Up & Down the River</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:radial-gradient(ellipse at 50% 0%,#1a4a2e 0%,#0a1f14 60%,#060f0a 100%);min-height:100vh;color:#f0e6d3;overscroll-behavior:none}
+.screen{display:none;padding:14px 14px 40px;align-items:center;flex-direction:column}
+.screen.active{display:flex}
+.card{background:rgba(10,31,20,0.9);border:1px solid #1a4a2e;border-radius:20px;padding:22px 18px;width:100%;max-width:430px;margin-bottom:12px}
+.title{font-size:22px;font-weight:700;text-align:center;color:#d4af37;margin-bottom:3px;letter-spacing:.3px}
+.sub{font-size:13px;color:#5a8a6a;text-align:center;margin-bottom:18px}
+.lbl{font-size:11px;color:#5a8a6a;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase}
+input[type=text]{width:100%;padding:12px 14px;font-size:16px;border:1px solid #1a4a2e;border-radius:12px;background:#06160d;color:#f0e6d3;margin-bottom:8px;outline:none}
+input[type=number]{width:100%;padding:12px 14px;font-size:16px;border:1px solid #1a4a2e;border-radius:12px;background:#06160d;color:#f0e6d3;margin-bottom:8px;outline:none;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+.btn{width:100%;padding:15px;font-size:16px;font-weight:700;cursor:pointer;border-radius:14px;border:none;background:linear-gradient(135deg,#d4af37,#b8962e);color:#060f0a;margin-top:12px;letter-spacing:.2px}
+.btn-disabled{width:100%;padding:15px;font-size:16px;font-weight:700;border-radius:14px;border:1px solid #1a3a2a;background:#0a1a10;color:#2a5a35;margin-top:12px;cursor:not-allowed}
+.btn-ghost{width:100%;padding:13px;font-size:15px;font-weight:600;cursor:pointer;border-radius:14px;border:1px solid #1a4a2e;background:transparent;color:#5a8a6a;margin-top:8px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #0e2a1c}
+.row:last-child{border-bottom:none}
+.infobox{background:#06160d;border:1px solid #1a4a2e;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.notice-warn{background:#1a0e00;border:1px solid #7a4a00;border-radius:10px;padding:10px 14px;font-size:13px;color:#c8883a;margin-bottom:12px;text-align:center}
+.notice-info{background:#0a1020;border:1px solid #1a3a6a;border-radius:10px;padding:10px 14px;font-size:13px;color:#5a9acc;margin-bottom:12px;text-align:center}
+.pips{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.pip{border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;flex-shrink:0;transition:all .2s}
+.pc-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.pc-btn{width:44px;height:44px;border-radius:10px;border:1px solid #1a4a2e;background:#06160d;color:#5a8a6a;font-size:17px;font-weight:bold;cursor:pointer}
+.pc-btn.sel{border:2px solid #d4af37;background:rgba(212,175,55,.12);color:#d4af37}
+.bid-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:16px 0}
+.bid-btn{width:56px;height:56px;border-radius:50%;font-size:22px;font-weight:bold;background:linear-gradient(145deg,#1a4a2e,#0e2a1c);color:#f0e6d3;border:1px solid #2a6040;cursor:pointer;position:relative}
+.bid-btn:disabled{background:#060f0a;color:#1a3a2a;border-color:#0e1a14;cursor:not-allowed}
+.cnt-row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid #0e2a1c}
+.cnt-row:last-child{border-bottom:none}
+.cnt-btn{width:38px;height:38px;border-radius:10px;background:#06160d;color:#f0e6d3;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;border:1px solid #1a4a2e}
+.cnt-btn.disabled{border-color:#0e1a14;background:#060f0a;color:#1a3a2a;cursor:not-allowed}
+.cnt-val{font-size:28px;font-weight:bold;min-width:28px;text-align:center}
+.badge{display:inline-block;padding:5px 16px;border-radius:20px;font-size:13px;border:1px solid #1a4a2e;color:#5a8a6a;margin-bottom:14px}
+.badge.done{border-color:#2d6a4f;color:#7ec8a0;background:rgba(45,106,79,.15)}
+.winner-box{background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);border-radius:16px;padding:20px;text-align:center;margin-bottom:20px}
+.round-sel{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px}
+.round-btn{min-width:40px;height:48px;padding:0 4px;border-radius:10px;border:1px solid #1a4a2e;background:#06160d;color:#5a8a6a;font-size:13px;font-weight:bold;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.round-btn.sel{border:2px solid #d4af37;background:rgba(212,175,55,.12);color:#d4af37}
+.dealer-sel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.dealer-btn{padding:9px 14px;border-radius:10px;border:1px solid #1a4a2e;background:#06160d;color:#5a8a6a;font-size:14px;cursor:pointer}
+.dealer-btn.sel{border:2px solid #d4af37;background:rgba(212,175,55,.12);color:#d4af37}
+.score-entry-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.score-entry-row .sname{font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score-entry-row input{width:86px;flex-shrink:0;margin-bottom:0;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="s-setup" class="screen active">
+  <div class="card" style="margin-top:20px">
+    <div style="font-size:42px;text-align:center;margin-bottom:6px">🃏</div>
+    <div class="title">Up & Down the River</div>
+    <div class="sub">trick-taking scorekeeper</div>
+    <div class="lbl">number of players</div>
+    <div class="pc-btns" id="pcBtns"></div>
+    <div class="lbl">player names</div>
+    <div id="nameInputs"></div>
+    <button class="btn" onclick="startGame()">Deal 'Em In →</button>
+    <button class="btn-ghost" onclick="goToContinue()">Continue a Game →</button>
+  </div>
+</div>
+
+<!-- CONTINUE GAME -->
+<div id="s-continue" class="screen">
+  <div class="card" style="margin-top:16px">
+    <div class="title">Continue Game</div>
+    <div class="sub">pick up where you left off</div>
+
+    <div class="lbl">number of players</div>
+    <div class="pc-btns" id="cont-pcBtns"></div>
+
+    <div class="lbl">player names</div>
+    <div id="cont-nameInputs"></div>
+
+    <div class="lbl">scores before this round</div>
+    <div id="cont-scoreInputs"></div>
+
+    <div class="lbl" style="margin-top:6px">which round are you starting?</div>
+    <div class="round-sel" id="cont-roundSel"></div>
+
+    <div class="lbl">who is dealing this round?</div>
+    <div class="dealer-sel" id="cont-dealerSel"></div>
+
+    <button class="btn" onclick="continueGame()">Jump In →</button>
+    <button class="btn-ghost" onclick="goPhase('setup')">← Back</button>
+  </div>
+</div>
+
+<!-- ROUND INTRO -->
+<div id="s-roundIntro" class="screen">
+  <div class="card" style="margin-top:16px">
+    <div class="title" id="ri-title"></div>
+    <div class="sub">of 15</div>
+    <div class="pips" id="ri-pips"></div>
+    <div style="text-align:center;margin:10px 0 18px">
+      <div style="font-size:60px;font-weight:700;color:#d4af37;line-height:1" id="ri-cards"></div>
+      <div style="color:#5a8a6a;font-size:14px;margin-top:4px">cards per player</div>
+    </div>
+    <div class="notice-info">🃏 Flip a card from the remaining deck to set trump suit</div>
+    <div class="infobox">
+      <div class="row"><span style="color:#5a8a6a;font-size:14px">Dealer</span><span style="color:#d4af37;font-weight:bold" id="ri-dealer"></span></div>
+      <div class="row" style="border:none;padding-bottom:0"><span style="color:#5a8a6a;font-size:14px">Bids first</span><span style="font-weight:bold" id="ri-first"></span></div>
+    </div>
+    <div class="lbl">current scores</div>
+    <div id="ri-scores"></div>
+    <button class="btn" onclick="goPhase('bidding');renderBidding()">Start Bidding →</button>
+  </div>
+</div>
+
+<!-- BIDDING -->
+<div id="s-bidding" class="screen">
+  <div class="card" style="margin-top:16px">
+    <div class="title">Bidding</div>
+    <div class="sub" id="bid-sub"></div>
+    <div id="bid-notice"></div>
+    <div style="text-align:center;margin:12px 0 6px">
+      <div style="font-size:12px;color:#5a8a6a;letter-spacing:1px;margin-bottom:5px" id="bid-role"></div>
+      <div style="font-size:30px;font-weight:bold;color:#d4af37" id="bid-name"></div>
+      <div style="color:#5a8a6a;font-size:14px;margin-top:4px">How many tricks will you win?</div>
+    </div>
+    <div class="bid-grid" id="bid-btns"></div>
+    <div id="bid-log"></div>
+  </div>
+</div>
+
+<!-- TRICKS -->
+<div id="s-tricks" class="screen">
+  <div class="card" style="margin-top:16px">
+    <div class="title">Tricks Won</div>
+    <div style="text-align:center">
+      <span class="badge" id="tricks-badge"></span>
+    </div>
+    <div id="tricks-rows"></div>
+    <button class="btn" id="tricks-submit" onclick="finishRound()">Calculate Scores →</button>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div id="s-summary" class="screen">
+  <div class="card" style="margin-top:16px">
+    <div class="title" id="sum-title"></div>
+    <div class="sub" id="sum-sub"></div>
+    <div id="sum-rows"></div>
+    <div style="margin-top:12px">
+      <div class="lbl">leaderboard</div>
+      <div id="sum-board"></div>
+    </div>
+    <button class="btn" id="sum-btn" onclick="nextRound()"></button>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="s-gameover" class="screen">
+  <div class="card" style="margin-top:20px;text-align:center">
+    <div style="font-size:54px;margin-bottom:6px">🏆</div>
+    <div class="title">Game Over!</div>
+    <div class="winner-box" style="margin-top:16px">
+      <div style="font-size:12px;color:#5a8a6a;letter-spacing:1px;margin-bottom:6px">WINNER</div>
+      <div style="font-size:30px;font-weight:bold;color:#d4af37" id="go-winner"></div>
+      <div style="font-size:18px;margin-top:4px" id="go-pts"></div>
+    </div>
+    <div id="go-board" style="text-align:left"></div>
+    <button class="btn" onclick="resetAll()">New Game</button>
+  </div>
+</div>
+
+<script>
+const ROUNDS=[8,7,6,5,4,3,2,1,2,3,4,5,6,7,8];
+const MEDALS=['🥇','🥈','🥉','4th','5th','6th','7th','8th'];
+
+let count=4, players=[], scores=[], roundIdx=0, dealerIdx=0;
+let bids=[], bidOrder=[], bidStep=0, won=[];
+let lastBids=[], lastWon=[], lastScores=[];
+
+// continue screen working state
+let contCount=4, contRoundIdx=0, contDealerIdx=0;
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function goPhase(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function calcScore(bid,w){
+  if(w===bid) return 10+2*bid;
+  if(w>bid) return w;
+  return 0;
+}
+
+function makePips(current){
+  const d=document.getElementById('ri-pips'); d.innerHTML='';
+  ROUNDS.forEach((n,i)=>{
+    const p=document.createElement('div'); p.className='pip';
+    const done=i<current,cur=i===current;
+    p.style.cssText='width:'+(cur?28:18)+'px;height:'+(cur?28:18)+'px;background:'+(done?'#1a5a35':cur?'#d4af37':'#0e2a1c')+';border:'+(cur?'none':'1px solid #1a4a2e')+';font-size:'+(cur?11:9)+'px;color:'+(done?'#7ec8a0':cur?'#060f0a':'#2a6040');
+    p.textContent=n; d.appendChild(p);
+  });
+}
+
+// ── setup ─────────────────────────────────────────────────────────────────────
+function initSetup(){
+  const pc=document.getElementById('pcBtns'); pc.innerHTML='';
+  [2,3,4,5,6,7,8].forEach(n=>{
+    const b=document.createElement('button');
+    b.className='pc-btn'+(n===count?' sel':'');
+    b.textContent=n;
+    b.onclick=()=>{count=n;initSetup();};
+    pc.appendChild(b);
+  });
+  const ni=document.getElementById('nameInputs');
+  const existing=Array.from(ni.querySelectorAll('input')).map(i=>i.value);
+  ni.innerHTML='';
+  for(let i=0;i<count;i++){
+    const inp=document.createElement('input');
+    inp.type='text'; inp.placeholder='Player '+(i+1);
+    inp.value=existing[i]||''; ni.appendChild(inp);
+  }
+}
+
+function startGame(){
+  const inputs=document.querySelectorAll('#nameInputs input');
+  players=Array.from(inputs).map((inp,i)=>inp.value.trim()||'Player '+(i+1));
+  scores=Array(count).fill(0);
+  roundIdx=0; dealerIdx=0;
+  showRoundIntro();
+}
+
+// ── continue game ─────────────────────────────────────────────────────────────
+function goToContinue(){
+  contCount=count; contRoundIdx=0; contDealerIdx=0;
+  buildContinueScreen();
+  goPhase('continue');
+}
+
+function getContNames(){
+  return Array.from(document.querySelectorAll('#cont-nameInputs input')).map((inp,i)=>inp.value.trim()||'Player '+(i+1));
+}
+
+function buildContinueScreen(){
+  // player count
+  const pc=document.getElementById('cont-pcBtns'); pc.innerHTML='';
+  [2,3,4,5,6,7,8].forEach(n=>{
+    const b=document.createElement('button');
+    b.className='pc-btn'+(n===contCount?' sel':'');
+    b.textContent=n;
+    b.onclick=()=>{contCount=n;if(contDealerIdx>=contCount)contDealerIdx=0;buildContinueScreen();};
+    pc.appendChild(b);
+  });
+
+  // names — preserve values across re-renders
+  const ni=document.getElementById('cont-nameInputs');
+  const oldNames=Array.from(ni.querySelectorAll('input')).map(i=>i.value);
+  ni.innerHTML='';
+  for(let i=0;i<contCount;i++){
+    const inp=document.createElement('input');
+    inp.type='text'; inp.placeholder='Player '+(i+1);
+    inp.value=oldNames[i]||'';
+    inp.oninput=()=>{refreshScoreLabels();buildDealerButtons();};
+    ni.appendChild(inp);
+  }
+
+  // scores — preserve values across re-renders
+  const si=document.getElementById('cont-scoreInputs');
+  const oldScores=Array.from(si.querySelectorAll('input')).map(i=>i.value);
+  si.innerHTML='';
+  const names=getContNames();
+  for(let i=0;i<contCount;i++){
+    const row=document.createElement('div'); row.className='score-entry-row';
+    const lbl=document.createElement('span'); lbl.className='sname'; lbl.id='cont-slbl-'+i;
+    lbl.textContent=names[i];
+    const inp=document.createElement('input');
+    inp.type='number'; inp.placeholder='0'; inp.min='0';
+    inp.value=oldScores[i]||'';
+    row.appendChild(lbl); row.appendChild(inp);
+    si.appendChild(row);
+  }
+
+  // round buttons — show round number + card count
+  const rs=document.getElementById('cont-roundSel'); rs.innerHTML='';
+  ROUNDS.forEach((cards,i)=>{
+    const b=document.createElement('button');
+    b.className='round-btn'+(i===contRoundIdx?' sel':'');
+    const numDiv=document.createElement('div');
+    numDiv.style.cssText='font-size:14px;font-weight:bold';
+    numDiv.textContent=i+1;
+    const cdDiv=document.createElement('div');
+    cdDiv.style.cssText='font-size:9px;color:'+(i===contRoundIdx?'#d4af37':'#5a8a6a');
+    cdDiv.textContent=cards+'cd';
+    b.appendChild(numDiv); b.appendChild(cdDiv);
+    b.onclick=()=>{contRoundIdx=i;buildContinueScreen();};
+    rs.appendChild(b);
+  });
+
+  buildDealerButtons();
+}
+
+function refreshScoreLabels(){
+  const names=getContNames();
+  names.forEach((n,i)=>{
+    const lbl=document.getElementById('cont-slbl-'+i);
+    if(lbl) lbl.textContent=n;
+  });
+}
+
+function buildDealerButtons(){
+  const names=getContNames();
+  const ds=document.getElementById('cont-dealerSel'); ds.innerHTML='';
+  names.forEach((n,i)=>{
+    const b=document.createElement('button');
+    b.className='dealer-btn'+(i===contDealerIdx?' sel':'');
+    b.textContent=n;
+    b.onclick=()=>{contDealerIdx=i;buildDealerButtons();};
+    ds.appendChild(b);
+  });
+}
+
+function continueGame(){
+  const nameInps=document.querySelectorAll('#cont-nameInputs input');
+  const scoreInps=document.querySelectorAll('#cont-scoreInputs input');
+  count=contCount;
+  players=Array.from(nameInps).map((inp,i)=>inp.value.trim()||'Player '+(i+1));
+  scores=Array.from(scoreInps).map(inp=>parseInt(inp.value)||0);
+  roundIdx=contRoundIdx;
+  dealerIdx=contDealerIdx;
+  showRoundIntro();
+}
+
+// ── round intro ───────────────────────────────────────────────────────────────
+function showRoundIntro(){
+  const cc=ROUNDS[roundIdx];
+  document.getElementById('ri-title').textContent='Round '+(roundIdx+1);
+  makePips(roundIdx);
+  document.getElementById('ri-cards').textContent=cc;
+  document.getElementById('ri-dealer').textContent=players[dealerIdx];
+  document.getElementById('ri-first').textContent=players[(dealerIdx+1)%count];
+  const sc=document.getElementById('ri-scores'); sc.innerHTML='';
+  players.forEach((p,i)=>{
+    const r=document.createElement('div'); r.className='row';
+    r.innerHTML='<span>'+p+'</span><span style="color:#d4af37;font-weight:bold">'+scores[i]+' pts</span>';
+    sc.appendChild(r);
+  });
+  goPhase('roundIntro');
+}
+
+// ── bidding ───────────────────────────────────────────────────────────────────
+function startBiddingSetup(){
+  bidOrder=[];
+  for(let i=1;i<=count;i++) bidOrder.push((dealerIdx+i)%count);
+  bids=Array(count).fill(-1);
+  bidStep=0;
+}
+
+function getRestricted(){
+  const cc=ROUNDS[roundIdx];
+  if(cc<=3||bidStep!==count-1) return null;
+  const total=bids.reduce((s,b)=>s+(b>=0?b:0),0);
+  const r=cc-total;
+  return(r>=0&&r<=cc)?r:null;
+}
+
+function renderBidding(){
+  startBiddingSetup();
+  renderBidStep();
+}
+
+function renderBidStep(){
+  const cc=ROUNDS[roundIdx];
+  const pidx=bidOrder[bidStep];
+  const isDealer=bidStep===count-1;
+  const totalSoFar=bids.reduce((s,b)=>s+(b>=0?b:0),0);
+  const restricted=getRestricted();
+
+  document.getElementById('bid-sub').textContent='Round '+(roundIdx+1)+' · '+cc+' cards · bidder '+(bidStep+1)+' of '+count;
+  document.getElementById('bid-role').textContent=isDealer?'DEALER':'NOW BIDDING';
+  document.getElementById('bid-name').textContent=players[pidx];
+
+  const notice=document.getElementById('bid-notice'); notice.innerHTML='';
+  if(restricted!==null){
+    notice.innerHTML='<div class="notice-warn">⚠️ Dealer cannot bid <strong>'+restricted+'</strong> — total bids can\'t equal '+cc+'</div>';
+  }
+
+  const bb=document.getElementById('bid-btns'); bb.innerHTML='';
+  for(let i=0;i<=cc;i++){
+    const b=document.createElement('button');
+    b.className='bid-btn'; b.textContent=i;
+    b.disabled=(i===restricted);
+    if(i===restricted){
+      const x=document.createElement('span');
+      x.style.cssText='position:absolute;top:2px;right:4px;font-size:10px;color:#7a4a00';
+      x.textContent='✕'; b.appendChild(x);
+    }
+    b.onclick=(()=>{const v=i;return()=>placeBid(v);})();
+    bb.appendChild(b);
+  }
+
+  const log=document.getElementById('bid-log'); log.innerHTML='';
+  if(bids.some(b=>b>=0)){
+    const wrap=document.createElement('div');
+    wrap.className='infobox'; wrap.style.marginBottom='0';
+    let h='<div class="lbl">bids so far · total: '+totalSoFar+'</div>';
+    players.forEach((p,i)=>{if(bids[i]>=0) h+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:15px"><span style="color:#b0c8c0">'+p+'</span><span style="color:#d4af37;font-weight:bold">'+bids[i]+'</span></div>';});
+    wrap.innerHTML=h; log.appendChild(wrap);
+  }
+}
+
+function placeBid(val){
+  bids[bidOrder[bidStep]]=val;
+  if(bidStep===count-1){
+    won=Array(count).fill(0);
+    renderTricks();
+    goPhase('tricks');
+  } else {
+    bidStep++;
+    renderBidStep();
+  }
+}
+
+// ── tricks ────────────────────────────────────────────────────────────────────
+function renderTricks(){
+  const cc=ROUNDS[roundIdx];
+  const total=won.reduce((a,b)=>a+b,0);
+  const rem=cc-total;
+
+  const badge=document.getElementById('tricks-badge');
+  badge.textContent=rem>0?rem+' trick'+(rem!==1?'s':'')+' left to assign':'✓ All tricks assigned';
+  badge.className='badge'+(rem===0?' done':'');
+
+  const rows=document.getElementById('tricks-rows'); rows.innerHTML='';
+  players.forEach((p,i)=>{
+    const row=document.createElement('div'); row.className='cnt-row';
+    const exact=won[i]===bids[i];
+    row.innerHTML=
+      '<div><div style="font-size:16px;font-weight:bold">'+p+'</div><div style="font-size:12px;color:#5a8a6a;margin-top:3px">bid: '+bids[i]+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:14px">'+
+      '<button class="cnt-btn'+(won[i]<=0?' disabled':'')+'" onclick="changeWon('+i+',-1)">−</button>'+
+      '<span class="cnt-val" style="color:'+(exact?'#d4af37':'#f0e6d3')+'">'+won[i]+'</span>'+
+      '<button class="cnt-btn'+(total>=cc?' disabled':'')+'" onclick="changeWon('+i+',1)">+</button>'+
+      '</div>';
+    rows.appendChild(row);
+  });
+
+  const sub=document.getElementById('tricks-submit');
+  if(rem===0){sub.className='btn';sub.disabled=false;sub.textContent='Calculate Scores →';}
+  else{sub.className='btn-disabled';sub.disabled=true;sub.textContent='Need '+rem+' more trick'+(rem!==1?'s':'');}
+}
+
+function changeWon(i,d){
+  const cc=ROUNDS[roundIdx];
+  const total=won.reduce((a,b)=>a+b,0);
+  if(d>0&&total>=cc) return;
+  if(d<0&&won[i]<=0) return;
+  won[i]+=d; renderTricks();
+}
+
+// ── summary ───────────────────────────────────────────────────────────────────
+function finishRound(){
+  const rs=players.map((_,i)=>calcScore(bids[i],won[i]));
+  lastScores=[...rs]; lastBids=[...bids]; lastWon=[...won];
+  scores=scores.map((s,i)=>s+rs[i]);
+  renderSummary(); goPhase('summary');
+}
+
+function renderSummary(){
+  document.getElementById('sum-title').textContent='Round '+(roundIdx+1)+' Results';
+  document.getElementById('sum-sub').textContent=roundIdx<14?(14-roundIdx)+' rounds remaining':'Final round!';
+  const rows=document.getElementById('sum-rows'); rows.innerHTML='';
+  players.forEach((p,i)=>{
+    const hit=lastWon[i]===lastBids[i],over=lastWon[i]>lastBids[i];
+    const g=lastScores[i];
+    const row=document.createElement('div'); row.className='row'; row.style.padding='13px 0';
+    row.innerHTML=
+      '<div style="flex:1"><div style="font-weight:bold;font-size:16px">'+p+'</div>'+
+      '<div style="font-size:13px;color:#5a8a6a;margin-top:3px">bid <strong style="color:#f0e6d3">'+lastBids[i]+'</strong> · won <strong style="color:#f0e6d3">'+lastWon[i]+'</strong> · '+
+      '<span style="color:'+(hit?'#7ec8a0':over?'#d4a045':'#c44444')+'">'+(hit?'✓ Exact!':over?'▲ Over':'✗ Under')+'</span></div></div>'+
+      '<div style="text-align:right;margin-left:12px"><div style="font-size:22px;font-weight:bold;color:'+(g>0?'#d4af37':'#5a4a4a')+'">+'+g+'</div><div style="font-size:12px;color:#5a8a6a">'+scores[i]+' total</div></div>';
+    rows.appendChild(row);
+  });
+  const sorted=[...players.map((p,i)=>({p,s:scores[i]}))].sort((a,b)=>b.s-a.s);
+  const board=document.getElementById('sum-board'); board.innerHTML='';
+  sorted.forEach(({p,s},r)=>{
+    const row=document.createElement('div'); row.className='row';
+    row.innerHTML='<span style="color:'+(r===0?'#d4af37':'#b0c8c0')+';font-size:15px">'+MEDALS[r]+' '+p+'</span><span style="font-weight:bold;color:'+(r===0?'#d4af37':'#f0e6d3')+'">'+s+'</span>';
+    board.appendChild(row);
+  });
+  document.getElementById('sum-btn').textContent=roundIdx===14?'Final Results 🏆':'Next Round →';
+}
+
+function nextRound(){
+  if(roundIdx===14){showGameOver();return;}
+  roundIdx++; dealerIdx=(dealerIdx+1)%count;
+  showRoundIntro();
+}
+
+// ── game over ─────────────────────────────────────────────────────────────────
+function showGameOver(){
+  const sorted=[...players.map((p,i)=>({p,s:scores[i]}))].sort((a,b)=>b.s-a.s);
+  document.getElementById('go-winner').textContent=sorted[0].p;
+  document.getElementById('go-pts').textContent=sorted[0].s+' points';
+  const board=document.getElementById('go-board'); board.innerHTML='';
+  sorted.slice(1).forEach(({p,s},r)=>{
+    const row=document.createElement('div'); row.className='row';
+    row.innerHTML='<span style="font-size:16px">'+MEDALS[r+1]+' '+p+'</span><span style="font-weight:bold;color:#d4af37">'+s+' pts</span>';
+    board.appendChild(row);
+  });
+  goPhase('gameover');
+}
+
+function resetAll(){count=4;initSetup();goPhase('setup');}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+initSetup();
+</script>
+</body>
+</html>
